@@ -23,10 +23,10 @@ import {
   IonRow,
   IonCol,
 } from '@ionic/react';
-import { logoGoogle, timeOutline, cashOutline, personOutline } from 'ionicons/icons';
+import { logoGoogle, timeOutline, cashOutline, personOutline, trashOutline } from 'ionicons/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase/config';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 
 interface ProductDetails {
   id: string;
@@ -129,6 +129,28 @@ const Profile: React.FC = () => {
     return new Date(timestamp.seconds * 1000).toLocaleDateString();
   };
 
+  const handleDeleteListing = async (productId: string) => {
+    if (!currentUser) return;
+
+    try {
+      setLoading(true);
+      const productRef = doc(db, 'product_details', productId);
+      await updateDoc(productRef, {
+        status: 'expired'
+      });
+      
+      setToastMessage('Listing removed successfully');
+      setShowToast(true);
+      await fetchUserData(); // Refresh the user's listings
+    } catch (error) {
+      console.error('Error removing listing:', error);
+      setToastMessage('Failed to remove listing');
+      setShowToast(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -203,6 +225,19 @@ const Profile: React.FC = () => {
                                   <p>{formatDate(listing.createdAt)}</p>
                                 </IonLabel>
                               </IonItem>
+                              {listing.status === 'active' && (
+                                <div className="ion-padding-vertical">
+                                  <IonButton
+                                    expand="block"
+                                    color="danger"
+                                    onClick={() => handleDeleteListing(listing.id)}
+                                    disabled={loading}
+                                  >
+                                    <IonIcon slot="start" icon={trashOutline} />
+                                    Remove Listing
+                                  </IonButton>
+                                </div>
+                              )}
                             </div>
                           </IonCol>
                         </IonRow>

@@ -17,11 +17,15 @@ import {
   IonRefresherContent,
   IonButton,
   RefresherEventDetail,
+  IonText,
+  IonIcon,
 } from '@ionic/react';
+import { trashOutline } from 'ionicons/icons';
 import { db } from '../firebase/config';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import BidModal from '../components/BidModal';
+import { useHistory } from 'react-router-dom';
 
 interface ProductDetails {
   id: string;
@@ -40,6 +44,7 @@ const ProductList: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductDetails | null>(null);
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const { currentUser } = useAuth();
+  const history = useHistory();
 
   const fetchProducts = async () => {
     try {
@@ -84,10 +89,38 @@ const ProductList: React.FC = () => {
     if (!currentUser) {
       setToastMessage('Please sign in to place a bid');
       setShowToast(true);
+      history.push('/profile');
+      return;
+    }
+    if (product.sellerId === currentUser.uid) {
+      setToastMessage('You cannot bid on your own listing');
+      setShowToast(true);
       return;
     }
     setSelectedProduct(product);
     setIsBidModalOpen(true);
+  };
+
+  const handleDeleteListing = async (productId: string) => {
+    if (!currentUser) return;
+
+    try {
+      setLoading(true);
+      const productRef = doc(db, 'product_details', productId);
+      await updateDoc(productRef, {
+        status: 'expired'
+      });
+      
+      setToastMessage('Listing removed successfully');
+      setShowToast(true);
+      await fetchProducts(); // Refresh the list
+    } catch (error) {
+      console.error('Error removing listing:', error);
+      setToastMessage('Failed to remove listing');
+      setShowToast(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -99,6 +132,11 @@ const ProductList: React.FC = () => {
 
         <div className="ion-padding">
           <h1>Active Listings</h1>
+          {!currentUser && (
+            <IonText color="medium">
+              <p>Sign in to place bids on items</p>
+            </IonText>
+          )}
         </div>
 
         <IonGrid>
@@ -126,13 +164,27 @@ const ProductList: React.FC = () => {
                         </IonChip>
                       ))}
                     </div>
-                    <IonButton
-                      expand="block"
-                      onClick={() => handleBidClick(product)}
-                      disabled={product.sellerId === currentUser?.uid}
-                    >
-                      {product.sellerId === currentUser?.uid ? 'Your Listing' : 'Place Bid'}
-                    </IonButton>
+                    {product.sellerId === currentUser?.uid ? (
+                      <div className="ion-padding-vertical">
+                        <IonButton
+                          expand="block"
+                          color="danger"
+                          onClick={() => handleDeleteListing(product.id)}
+                          disabled={loading}
+                        >
+                          <IonIcon slot="start" icon={trashOutline} />
+                          Remove Listing
+                        </IonButton>
+                      </div>
+                    ) : (
+                      <IonButton
+                        expand="block"
+                        onClick={() => handleBidClick(product)}
+                        disabled={product.sellerId === currentUser?.uid}
+                      >
+                        Place Bid
+                      </IonButton>
+                    )}
                   </IonCardContent>
                 </IonCard>
               </IonCol>

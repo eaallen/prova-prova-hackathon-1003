@@ -22,6 +22,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getVertexAI, GenerativeModel } from 'firebase/vertexai';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useHistory } from 'react-router-dom';
 
 interface ProductDetails {
     images: string[];
@@ -38,13 +39,20 @@ const CameraPage: React.FC = () => {
     const [toastMessage, setToastMessage] = useState('');
     const [keywords, setKeywords] = useState<string[]>([]);
     const { currentUser } = useAuth();
+    const history = useHistory();
 
     useEffect(() => {
-        // Automatically open camera when component mounts
-        takePicture();
-    }, []);
+        if (!currentUser) {
+            setToastMessage('Please sign in to access the camera');
+            setShowToast(true);
+            history.push('/profile');
+            return;
+        }
+        // Only open camera if user is authenticated
+    }, [currentUser]);
 
     const takePicture = async () => {
+        console.log("takePicture");
         try {
             setLoading(true);
             const image = await Camera.getPhoto({

@@ -48,16 +48,19 @@ import './theme/variables.css';
 
 setupIonicReact();
 
-const App: React.FC = () => {
-  // const { currentUser } = useAuth();
+const ProtectedRoute: React.FC<{ component: React.ComponentType<any> }> = ({ component: Component }) => {
+  const { currentUser } = useAuth();
+  return currentUser ? <Component /> : <Redirect to="/profile" />;
+};
 
+const App: React.FC = () => {
   return (
     <IonApp>
       <IonReactRouter>
         <IonTabs>
           <IonRouterOutlet>
             <Route exact path="/camera">
-              <Camera />
+              <ProtectedRoute component={Camera} />
             </Route>
             <Route exact path="/products">
               <ProductList />
