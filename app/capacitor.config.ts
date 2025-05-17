@@ -1,9 +1,17 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'ionic.app',
-  appName: 'app',
-  webDir: 'dist'
+  appId: 'com.snappurchases.app',
+  appName: 'Snap Purchases',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  },
+  plugins: {
+    Camera: {
+      permissions: ['camera', 'photos']
+    }
+  }
 };
 
 export default config;
