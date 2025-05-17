@@ -12,18 +12,31 @@ import {
     IonToast,
     IonFab,
     IonFabButton,
+    IonChip,
 } from '@ionic/react';
 import { camera, cloudCircle } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAuth } from '../contexts/AuthContext';
 import { storage } from '../firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getVertexAI, GenerativeModel } from 'firebase/vertexai';
+import { db } from '../firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+interface ProductDetails {
+    images: string[];
+    keywords: string[];
+    sellerId: string;
+    createdAt: any;
+    status: 'active' | 'sold' | 'expired';
+}
 
 const CameraPage: React.FC = () => {
     const [photo, setPhoto] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+    const [keywords, setKeywords] = useState<string[]>([]);
     const { currentUser } = useAuth();
 
     useEffect(() => {
@@ -42,6 +55,7 @@ const CameraPage: React.FC = () => {
             });
 
             if (image.dataUrl) {
+                console.log("image.dataUrl", image);
                 setPhoto(image.dataUrl);
             }
         } catch (error) {
@@ -68,6 +82,62 @@ const CameraPage: React.FC = () => {
         return new File([u8arr], filename, { type: mime });
     };
 
+    // Analyze image with Vertex AI
+    const analyzeImage = async (file: File) => {
+        console.log("imageBase64", file);
+        try {
+            const vertexAI = getVertexAI();
+            const model = new GenerativeModel(vertexAI, { model: "gemini-2.0-flash-001" });
+
+            const prompt = "Analyze this image and provide relevant keywords for an auction listing. Focus on the item's type, condition, brand, and key features. Format the response as a comma-separated list of keywords.";
+
+            const result = await model.generateContent([
+                prompt,
+                await fileToGenerativePart(file)
+            ]);
+
+            const response = await result.response;
+            const text = response.text();
+            
+            // Parse the response into keywords
+            const extractedKeywords = text
+                .split(',')
+                .map(keyword => keyword.trim())
+                .filter(keyword => keyword.length > 0);
+
+            setKeywords(extractedKeywords);
+            return extractedKeywords;
+        } catch (error) {
+            console.error('Error analyzing image:', error);
+            setToastMessage('Failed to analyze image');
+            setShowToast(true);
+            return [];
+        }
+    };
+
+    const createProductDetails = async (imageUrl: string, keywords: string[]) => {
+        if (!currentUser) return null;
+
+        try {
+            const productDetails: ProductDetails = {
+                images: [imageUrl],
+                keywords: keywords,
+                sellerId: currentUser.uid,
+                createdAt: serverTimestamp(),
+                status: 'active'
+            };
+
+            const docRef = await addDoc(collection(db, 'product_details'), productDetails);
+            console.log('Product details created with ID:', docRef.id);
+            return docRef.id;
+        } catch (error) {
+            console.error('Error creating product details:', error);
+            setToastMessage('Failed to create product details');
+            setShowToast(true);
+            return null;
+        }
+    };
+
     const uploadPhoto = async () => {
         if (!photo || !currentUser) return;
 
@@ -81,6 +151,10 @@ const CameraPage: React.FC = () => {
             // Convert data URL to File
             const file = dataURLtoFile(photo, filename);
             
+            // get the key words from the image
+            const extractedKeywords = await analyzeImage(file);
+            console.log('Extracted keywords:', extractedKeywords);
+
             // Create a reference to the file location in Firebase Storage
             const storageRef = ref(storage, `photos/${filename}`);
             
@@ -94,8 +168,12 @@ const CameraPage: React.FC = () => {
             setToastMessage('Photo uploaded successfully!');
             setShowToast(true);
 
-            // Here you can add code to create an auction with the photo URL
-            // For example: createAuction(downloadURL);
+            // Create product details in Firestore
+            const productId = await createProductDetails(downloadURL, extractedKeywords);
+            if (productId) {
+                setToastMessage('Product details created successfully!');
+                setShowToast(true);
+            }
 
         } catch (error) {
             console.error('Error uploading photo:', error);
@@ -123,6 +201,19 @@ const CameraPage: React.FC = () => {
                                 </div>
                             )}
 
+                            {keywords.length > 0 && (
+                                <div className="ion-margin-vertical">
+                                    <h3>Detected Keywords:</h3>
+                                    <div className="ion-padding">
+                                        {keywords.map((keyword, index) => (
+                                            <IonChip key={index} color="primary">
+                                                {keyword}
+                                            </IonChip>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {photo && (
                                 <IonButton
                                     expand="block"
@@ -131,7 +222,7 @@ const CameraPage: React.FC = () => {
                                     className="ion-margin-top"
                                 >
                                     <IonIcon slot="start" icon={cloudCircle} />
-                                    Upload
+                                    Upload & Analyze
                                 </IonButton>
                             )}
                         </IonCol>
@@ -160,5 +251,22 @@ const CameraPage: React.FC = () => {
         </IonPage>
     );
 };
+
+async function fileToGenerativePart(file: File) {
+    const base64EncodedDataPromise: Promise<string> = new Promise((resolve) => {
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+        if (reader.result && typeof reader.result === 'string') {
+          resolve(reader.result.split(',')[1]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    return {
+      inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+    };
+  }
+  
 
 export default CameraPage; 

@@ -10,11 +10,11 @@ import {
   setupIonicReact
 } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { camera, home, person } from 'ionicons/icons';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import CameraPage from './pages/Camera';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { camera, list, person } from 'ionicons/icons';
+import Camera from './pages/Camera';
+import ProductList from './pages/ProductList';
+import Profile from './pages/Profile';
+import { useAuth } from './contexts/AuthContext';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -48,44 +48,35 @@ import './theme/variables.css';
 
 setupIonicReact();
 
-const PrivateRoute: React.FC<{ component: React.FC; path: string }> = ({ component: Component, ...rest }) => {
-  const { currentUser, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+const App: React.FC = () => {
+  // const { currentUser } = useAuth();
 
   return (
-    <Route
-      {...rest}
-      render={props => {
-        return currentUser ? <Component /> : <Redirect to="/login" />;
-      }}
-    />
-  );
-};
-
-const App: React.FC = () => (
-  <IonApp>
-    <AuthProvider>
+    <IonApp>
       <IonReactRouter>
         <IonTabs>
           <IonRouterOutlet>
-            <Route exact path="/login" component={Login} />
-            <PrivateRoute path="/home" component={Home} />
-            <PrivateRoute path="/camera" component={CameraPage} />
+            <Route exact path="/camera">
+              <Camera />
+            </Route>
+            <Route exact path="/products">
+              <ProductList />
+            </Route>
+            <Route exact path="/profile">
+              <Profile />
+            </Route>
             <Route exact path="/">
-              <Redirect to="/home" />
+              <Redirect to="/products" />
             </Route>
           </IonRouterOutlet>
           <IonTabBar slot="bottom">
-            <IonTabButton tab="home" href="/home">
-              <IonIcon icon={home} />
-              <IonLabel>Home</IonLabel>
+            <IonTabButton tab="products" href="/products">
+              <IonIcon icon={list} />
+              <IonLabel>Listings</IonLabel>
             </IonTabButton>
             <IonTabButton tab="camera" href="/camera">
               <IonIcon icon={camera} />
-              <IonLabel>Camera</IonLabel>
+              <IonLabel>Add Item</IonLabel>
             </IonTabButton>
             <IonTabButton tab="profile" href="/profile">
               <IonIcon icon={person} />
@@ -94,8 +85,8 @@ const App: React.FC = () => (
           </IonTabBar>
         </IonTabs>
       </IonReactRouter>
-    </AuthProvider>
-  </IonApp>
-);
+    </IonApp>
+  );
+};
 
 export default App;
