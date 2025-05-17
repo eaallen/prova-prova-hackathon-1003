@@ -15,11 +15,13 @@ import {
   IonToast,
   IonRefresher,
   IonRefresherContent,
+  IonButton,
   RefresherEventDetail,
 } from '@ionic/react';
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
+import BidModal from '../components/BidModal';
 
 interface ProductDetails {
   id: string;
@@ -35,6 +37,8 @@ const ProductList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<ProductDetails | null>(null);
+  const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const { currentUser } = useAuth();
 
   const fetchProducts = async () => {
@@ -76,6 +80,16 @@ const ProductList: React.FC = () => {
     event.detail.complete();
   };
 
+  const handleBidClick = (product: ProductDetails) => {
+    if (!currentUser) {
+      setToastMessage('Please sign in to place a bid');
+      setShowToast(true);
+      return;
+    }
+    setSelectedProduct(product);
+    setIsBidModalOpen(true);
+  };
+
   return (
     <IonPage>
       <IonContent>
@@ -112,12 +126,31 @@ const ProductList: React.FC = () => {
                         </IonChip>
                       ))}
                     </div>
+                    <IonButton
+                      expand="block"
+                      onClick={() => handleBidClick(product)}
+                      disabled={product.sellerId === currentUser?.uid}
+                    >
+                      {product.sellerId === currentUser?.uid ? 'Your Listing' : 'Place Bid'}
+                    </IonButton>
                   </IonCardContent>
                 </IonCard>
               </IonCol>
             ))}
           </IonRow>
         </IonGrid>
+
+        {selectedProduct && (
+          <BidModal
+            isOpen={isBidModalOpen}
+            onClose={() => {
+              setIsBidModalOpen(false);
+              setSelectedProduct(null);
+            }}
+            productId={selectedProduct.id}
+            productTitle={selectedProduct.keywords[0] || 'Untitled Product'}
+          />
+        )}
 
         <IonLoading isOpen={loading} message="Loading products..." />
         
