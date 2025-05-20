@@ -8,7 +8,7 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 // Replace these with your actual Firebase config values
 const firebaseConfig = {
-    apiKey: "AIzaSyB9qXiJoHTRocPkH3MZLODpJCuuuLfQ5DE",
+    apiKey: "",
     authDomain: "snapbuy-ae03d.firebaseapp.com",
     projectId: "snapbuy-ae03d",
     storageBucket: "snapbuy-ae03d.firebasestorage.app",
