@@ -17,3 +17,14 @@ engineer:
 
 It worked out supprisingly well. While the AI did not implment the backend the way I would have (infact there were some serious issues that I just ignored given the time crunch of the hackathon)
 it did do a pretty good job at getting my POC up and running. 
+
+## Tech stack
+
+I used Ionic, hoping to get a POC running on Android. However, I only had time to test and deploy to web. I did deploy via Firebase for the hackathon, but I took it down to avoid costs. 
+
+* Ionic
+*     Web Interface
+* Firebase
+*     Hosting
+*     Database - Firestore
+*     Vertex - Gemini
