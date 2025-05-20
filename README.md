@@ -23,8 +23,8 @@ it did do a pretty good job at getting my POC up and running.
 I used Ionic, hoping to get a POC running on Android. However, I only had time to test and deploy to web. I did deploy via Firebase for the hackathon, but I took it down to avoid costs. 
 
 * Ionic
-*     Web Interface
+  * Web Interface
 * Firebase
-*     Hosting
-*     Database - Firestore
-*     Vertex - Gemini
+  * Hosting
+  * Database - Firestore
+  * Vertex - Gemini
